@@ -1,0 +1,335 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 224 71.4% 4.1%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220.9 39.3% 11%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 220 14.3% 95.9%;
+    --accent-foreground: 220.9 39.3% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 262.1 83.3% 57.8%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 224 71.4% 4.1%;
+    --foreground: 210 20% 98%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 20% 98%;
+    --popover: 224 71.4% 4.1%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 263.4 90% 59.8%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 215 27.9% 16.9%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 263.4 90% 59.8%;
+  }
+
+  body {
+    @apply bg-white text-slate-900 transition-colors duration-300 antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  .dark body {
+    @apply bg-slate-950 text-slate-100;
+  }
+}
+
+/* Custom premium scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 dark:bg-slate-800 rounded-full hover:bg-slate-300 dark:hover:bg-slate-700;
+}
+
+/* Glassmorphism panel styling classes */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  @apply shadow-sm;
+}
+
+.dark .glass-panel {
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  @apply shadow-none;
+}
+
+.glass-panel-glow {
+  box-shadow: 0 0 40px 0 rgba(99, 102, 241, 0.04);
+}
+
+/* Marquee Animation Classes */
+.marquee-container {
+  display: flex;
+  overflow: hidden;
+  user-select: none;
+  gap: 2rem;
+}
+
+.marquee-content {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-around;
+  min-width: 100%;
+  gap: 3rem;
+  animation: marquee-scroll 25s linear infinite;
+}
+
+@keyframes marquee-scroll {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-100%); }
+}
+
+/* ===================== Dashboard Utilities ===================== */
+
+/* Sidebar collapse smooth transition */
+.sidebar-transition {
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Scrollbar utilities */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(51 65 85) transparent;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Command palette backdrop animation */
+@keyframes cmd-fade-in {
+  from { opacity: 0; backdrop-filter: blur(0px); }
+  to { opacity: 1; backdrop-filter: blur(8px); }
+}
+
+/* Notification panel slide-in */
+@keyframes panel-slide-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* Active nav underline indicator */
+.nav-active-indicator {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 20px;
+  background: linear-gradient(to bottom, #6366f1, #8b5cf6);
+  border-radius: 0 2px 2px 0;
+}
+
+/* Dashboard card hover gradient */
+.card-hover-glow {
+  transition: box-shadow 0.3s ease;
+}
+
+.card-hover-glow:hover {
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.15), 0 8px 32px -4px rgba(99, 102, 241, 0.08);
+}
+
+/* Stat sparkline transition */
+.sparkline-path {
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+  animation: draw-line 0.8s ease forwards;
+}
+
+@keyframes draw-line {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Toggle switch transition */
+.toggle-thumb {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===================== GEOCAP-X Design System ===================== */
+
+/* Standard intelligence card */
+.geocap-card {
+  @apply rounded-2xl border border-slate-200/90 dark:border-slate-800/60 bg-white dark:bg-slate-900/40 backdrop-blur-sm transition-all duration-200 shadow-sm dark:shadow-none;
+}
+
+.geocap-card:hover {
+  @apply border-slate-300 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/60;
+}
+
+.geocap-card-header {
+  @apply flex items-center justify-between px-5 py-3.5 border-b border-slate-200/90 dark:border-slate-800/60 bg-slate-50/70 dark:bg-slate-950/40;
+}
+
+/* Standard section label */
+.geocap-section-label {
+  @apply text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400;
+}
+
+/* Standard semantic badge */
+.geocap-badge {
+  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wide;
+}
+
+.geocap-badge-emerald  { @apply bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400; }
+.geocap-badge-rose     { @apply bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400; }
+.geocap-badge-amber    { @apply bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400; }
+.geocap-badge-indigo   { @apply bg-indigo-500/10 border-indigo-500/20 text-indigo-600 dark:text-indigo-400; }
+.geocap-badge-slate    { @apply bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-400; }
+
+/* Standard empty state */
+.geocap-empty-state {
+  @apply flex flex-col items-center justify-center text-center gap-3 py-14 px-6;
+}
+
+.geocap-empty-state-icon {
+  @apply h-10 w-10 text-slate-400 dark:text-slate-700;
+}
+
+.geocap-empty-title {
+  @apply text-sm font-semibold text-slate-900 dark:text-white;
+}
+
+.geocap-empty-body {
+  @apply text-xs text-slate-500 max-w-xs leading-relaxed;
+}
+
+/* Responsive table wrapper */
+.geocap-table-wrapper {
+  @apply rounded-2xl border border-slate-200 dark:border-slate-800/60 bg-white dark:bg-slate-950/40 overflow-x-auto shadow-sm dark:shadow-none;
+}
+
+.geocap-table {
+  @apply w-full min-w-[640px] text-xs;
+}
+
+.geocap-table thead tr {
+  @apply border-b border-slate-200 dark:border-slate-800/50 bg-slate-50/90 dark:bg-slate-900/60;
+}
+
+.geocap-table thead th {
+  @apply px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap;
+}
+
+.geocap-table tbody tr {
+  @apply border-b border-slate-100 dark:border-slate-800/30 hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors;
+}
+
+.geocap-table tbody tr:last-child {
+  @apply border-b-0;
+}
+
+.geocap-table tbody td {
+  @apply px-4 py-3.5 text-slate-700 dark:text-slate-300;
+}
+
+/* Skeleton shimmer animation */
+@keyframes geocap-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+.geocap-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(226, 232, 240, 0.7) 25%,
+    rgba(241, 245, 249, 0.9) 50%,
+    rgba(226, 232, 240, 0.7) 75%
+  );
+  background-size: 200% 100%;
+  animation: geocap-shimmer 1.6s ease-in-out infinite;
+  @apply rounded-lg;
+}
+
+.dark .geocap-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(30, 41, 59, 0.6) 25%,
+    rgba(51, 65, 85, 0.5) 50%,
+    rgba(30, 41, 59, 0.6) 75%
+  );
+  background-size: 200% 100%;
+}
+
+/* Accent Color Variations */
+[data-accent="violet"] .bg-indigo-500 { @apply bg-violet-600 !important; }
+[data-accent="violet"] .text-indigo-400 { @apply text-violet-500 dark:text-violet-400 !important; }
+[data-accent="cyan"] .bg-indigo-500 { @apply bg-cyan-600 !important; }
+[data-accent="cyan"] .text-indigo-400 { @apply text-cyan-500 dark:text-cyan-400 !important; }
+[data-accent="emerald"] .bg-indigo-500 { @apply bg-emerald-600 !important; }
+[data-accent="emerald"] .text-indigo-400 { @apply text-emerald-500 dark:text-emerald-400 !important; }
+[data-accent="rose"] .bg-indigo-500 { @apply bg-rose-600 !important; }
+[data-accent="rose"] .text-indigo-400 { @apply text-rose-500 dark:text-rose-400 !important; }
+
+/* Density Variations */
+[data-density="compact"] main .p-5,
+[data-density="compact"] main .md\:p-6 {
+  padding: 0.75rem !important;
+}
+
+[data-density="compact"] .space-y-6 {
+  gap: 0.75rem !important;
+}
+
+/* Data layer distinction badges */
+.data-layer-observed     { @apply bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300; }
+.data-layer-derived      { @apply bg-indigo-500/10 border border-indigo-500/20 text-indigo-700 dark:text-indigo-300; }
+.data-layer-interpreted  { @apply bg-violet-500/10 border border-violet-500/20 text-violet-700 dark:text-violet-300; }
+
+/* Confidence bar */
+.geocap-conf-bar-track {
+  @apply h-1 w-full rounded-full bg-slate-200 dark:bg-slate-800/80 overflow-hidden;
+}
+
+.geocap-conf-bar-fill {
+  @apply h-full rounded-full bg-indigo-500 transition-all duration-500;
+}
+
+/* Pipeline stage indicator */
+.pipeline-stage {
+  @apply p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 space-y-1 transition-colors;
+}
+
+.pipeline-stage-ok   { @apply border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/5; }
+.pipeline-stage-warn { @apply border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/5; }
+.pipeline-stage-err  { @apply border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/5; }
+
+

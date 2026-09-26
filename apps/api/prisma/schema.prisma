@@ -1,0 +1,554 @@
+// ============================================================================
+// GEOCAP-X ENTERPRISE DATABASE SCHEMA (Prisma ORM)
+// ============================================================================
+// Engine: PostgreSQL 15+
+// Architecture: Multi-tenant SaaS with Organization isolation, RBAC,
+//               Stripe subscription billing, API Key management, and
+//               financial market observation intelligence tables.
+//
+// Entity Clusters:
+// 1. Identity & Auth: User, Profile, Role, Permission, RolePermission, Session, RefreshToken
+// 2. Multi-Tenancy: Organization, OrganizationMember, OrganizationInvitation
+// 3. Billing & Plans: SubscriptionPlan, Subscription, Invoice, Payment
+// 4. Governance: ApiKey, Notification, AuditLog, SavedReport, SavedSearch, FeatureFlag, SystemSetting, SupportTicket, Announcement
+// 5. Market & AI Intel: MarketObservation, DerivedMarketIndicator, EventAssetMapping,
+//                        EventWindowAnalysis, DataSourceMetadata, EventMarketIntelligence
+// ============================================================================
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum SystemRole {
+  SUPER_ADMIN
+  ADMIN
+  ANALYST
+  ENTERPRISE
+  USER
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  UNPAID
+}
+
+model User {
+  id                   String               @id @default(uuid())
+  email                String               @unique
+  passwordHash         String
+  isActive             Boolean              @default(true)
+  isEmailVerified      Boolean              @default(false)
+  emailVerifiedAt      DateTime?
+  verificationToken    String?
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
+  role                 SystemRole           @default(USER)
+  mfaSecret            String?
+  isMfaEnabled         Boolean              @default(false)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  deletedAt            DateTime?            // Soft delete support
+
+  profile              Profile?
+  settings             UserSetting?
+  sessions             Session[]
+  refreshTokens        RefreshToken[]
+  orgMemberships       OrganizationMember[]
+  apiKeys              ApiKey[]
+  notifications        Notification[]
+  auditLogs            AuditLog[]
+  savedReports         SavedReport[]
+  savedSearches        SavedSearch[]
+  supportTickets       SupportTicket[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model Profile {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  firstName String?
+  lastName  String?
+  avatarUrl String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+model Role {
+  id              String           @id @default(uuid())
+  name            SystemRole       @unique
+  description     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  
+  rolePermissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id              String           @id @default(uuid())
+  action          String           @unique // e.g. "users:read", "analytics:write"
+  description     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model Session {
+  id           String    @id @default(uuid())
+  userId       String
+  token        String    @unique
+  userAgent    String?
+  ipAddress    String?
+  isActive     Boolean   @default(true)
+  expiresAt    DateTime
+  lastActiveAt DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isActive])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  isRevoked Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRevoked])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model Organization {
+  id           String               @id @default(uuid())
+  name         String
+  slug         String               @unique
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  deletedAt    DateTime?
+
+  members      OrganizationMember[]
+  subscriptions Subscription[]
+  apiKeys      ApiKey[]
+  invitations  OrganizationInvitation[]
+
+  @@index([slug])
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String       @id @default(uuid())
+  organizationId String
+  userId         String
+  role           OrgRole      @default(MEMBER)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@map("organization_members")
+}
+
+model SubscriptionPlan {
+  id          String   @id @default(uuid())
+  name        String   @unique // e.g. "Free", "Pro", "Enterprise"
+  description String?
+  priceCode   String?  // Stripe Price ID
+  price       Decimal  @db.Decimal(10, 2)
+  interval    String   // "month", "year"
+  features    Json     // Plan limitations e.g. { "maxQueries": 100, "allowApiKeys": false }
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id                   String             @id @default(uuid())
+  organizationId       String
+  planId               String
+  status               SubscriptionStatus @default(ACTIVE)
+  stripeSubscriptionId String?            @unique
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  organization         Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan                 SubscriptionPlan   @relation(fields: [planId], references: [id])
+  invoices             Invoice[]
+
+  @@index([organizationId])
+  @@map("subscriptions")
+}
+
+model Invoice {
+  id              String      @id @default(uuid())
+  subscriptionId  String
+  stripeInvoiceId String?     @unique
+  amount          Decimal     @db.Decimal(10, 2)
+  currency        String      @default("usd")
+  status          String      // "paid", "open", "uncollectible"
+  invoiceUrl      String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  payments        Payment[]
+
+  @@index([subscriptionId])
+  @@map("invoices")
+}
+
+model Payment {
+  id              String   @id @default(uuid())
+  invoiceId       String
+  stripePaymentId String?  @unique
+  amount          Decimal  @db.Decimal(10, 2)
+  currency        String   @default("usd")
+  status          String   // "succeeded", "failed", "pending"
+  paymentMethod   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  invoice         Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("payments")
+}
+
+model ApiKey {
+  id             String        @id @default(uuid())
+  userId         String
+  organizationId String?
+  keyHash        String        @unique
+  name           String
+  scopes         Json          // Permission arrays for API key
+  isActive       Boolean       @default(true)
+  expiresAt      DateTime?
+  lastUsedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   // "system", "info", "alert"
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  userEmail String?
+  action    String
+  resource  String
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  timestamp DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([userId, timestamp])
+  @@index([action, timestamp])
+  @@map("audit_logs")
+}
+
+model SavedReport {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  config      Json     // Search configuration details
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("saved_reports")
+}
+
+model SavedSearch {
+  id        String   @id @default(uuid())
+  userId    String
+  query     String
+  filters   Json?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("saved_searches")
+}
+
+model UserSetting {
+  id                     String  @id @default(uuid())
+  userId                 String  @unique
+  timezone               String  @default("UTC")
+  language               String  @default("en")
+  theme                  String  @default("dark")
+  emailNotifications     Boolean @default(true)
+  marketingNotifications Boolean @default(false)
+  securityAlerts         Boolean @default(true)
+
+  user                   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+model FeatureFlag {
+  id          String   @id @default(uuid())
+  key         String   @unique // e.g. "new-dashboard"
+  description String?
+  isEnabled   Boolean  @default(false)
+  rules       Json?    // Targeting rules e.g. { "roles": ["ADMIN"] }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+  @@map("feature_flags")
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique // e.g. "site-name", "maintenance-mode"
+  value       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+  @@map("system_settings")
+}
+
+model OrganizationInvitation {
+  id             String       @id @default(uuid())
+  organizationId String
+  email          String
+  role           OrgRole      @default(MEMBER)
+  token          String       @unique
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("organization_invitations")
+}
+
+model SupportTicket {
+  id          String   @id @default(uuid())
+  userId      String
+  title       String
+  description String
+  status      String   @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  priority    String   @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("support_tickets")
+}
+
+model Announcement {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  target    String   @default("ALL") // ALL, PRO, ENTERPRISE
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("announcements")
+}
+
+model MarketObservation {
+  id                String   @id @default(uuid())
+  instrumentSymbol  String
+  assetClass        String
+  market            String
+  timestamp         DateTime
+  openPrice         Float?
+  highPrice         Float?
+  lowPrice          Float?
+  closePrice        Float?
+  volume            Float?
+  currency          String   @default("USD")
+  source            String
+  sourceIdentifier  String?
+  ingestionTimestamp DateTime @default(now())
+  dataQuality       Float    @default(1.0)
+  dataOrigin        String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([instrumentSymbol])
+  @@index([timestamp])
+  @@map("market_observations")
+}
+
+model DerivedMarketIndicator {
+  id                    String   @id @default(uuid())
+  instrumentSymbol      String
+  indicatorName         String
+  category              String
+  value                 Float
+  zScore                Float?
+  formula               String
+  sourceVariables       Json?
+  timeWindow            String
+  calculationTimestamp  DateTime @default(now())
+  methodologyVersion    String   @default("v6.1")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([instrumentSymbol])
+  @@index([indicatorName])
+  @@map("derived_market_indicators")
+}
+
+model EventAssetMapping {
+  id                 String   @id @default(uuid())
+  eventId            String
+  instrumentSymbol   String
+  assetClass         String
+  sector             String?
+  country            String?
+  mappingConfidence  Float    @default(1.0)
+  mappingRule        String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([instrumentSymbol])
+  @@map("event_asset_mappings")
+}
+
+model EventWindowAnalysis {
+  id                    String   @id @default(uuid())
+  eventId               String
+  instrumentSymbol      String
+  eventTimestamp        DateTime
+  preEventBaselineMean  Float?
+  preEventBaselineStd   Float?
+  eventDayValue         Float?
+  postEventValue        Float?
+  abnormalityZScore     Float?
+  signalType            String
+  dataQualityScore      Float    @default(1.0)
+  signalStrength        Float    @default(0.0)
+  supportingSources     Json?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([eventId])
+  @@map("event_window_analyses")
+}
+
+model DataSourceMetadata {
+  id                    String   @id @default(uuid())
+  providerName          String   @unique
+  category              String
+  status                String
+  lastSuccessfulFetch   DateTime?
+  errorMessage          String?
+  dataFreshnessSeconds  Float?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("data_source_metadata")
+}
+
+model EventMarketIntelligence {
+  id                        String   @id @default(uuid())
+  eventId                   String
+  instrumentSymbol          String
+  observationWindow         String   @default("[-30_DAYS, +5_DAYS]")
+  layer1EventSignal         Json
+  layer2NetworkSignal       Json
+  layer3MarketSignal        Json
+  layer4DataQuality         Json
+  fusedSignalScore          Float    @default(0.0)
+  interpretationStatus      String
+  crossAssetAlignmentJson   Json?
+  methodologyVersion        String   @default("v6.2")
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([instrumentSymbol])
+  @@index([interpretationStatus])
+  @@map("event_market_intelligence")
+}

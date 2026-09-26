@@ -1,0 +1,29 @@
+{
+  "name": "geocap-x-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GeoCap-X Enterprise Foundation Monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w apps/web",
+    "dev:api": "npm run start:dev -w apps/api",
+    "dev:ai": "node -e \"const { spawn } = require('child_process'); const p = spawn(process.platform === 'win32' ? '.\\\\.venv\\\\Scripts\\\\python.exe' : '.venv/bin/python', ['main.py'], { cwd: 'apps/ai', stdio: 'inherit', shell: true }); p.on('exit', code => process.exit(code));\"",
+    "dev": "concurrently -n \"WEB,API,AI\" -c \"cyan,magenta,green\" \"npm run dev:web\" \"npm run dev:api\" \"npm run dev:ai\"",
+
+    "build:web": "npm run build -w apps/web",
+    "build:api": "npm run build -w apps/api",
+    "build:shared": "npm run build -w packages/shared",
+    "build:ui": "npm run build -w packages/ui",
+    "build": "npm run build:shared && npm run build:ui && npm run build:web && npm run build:api",
+    "lint": "npm run lint -ws",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2"
+  }
+}

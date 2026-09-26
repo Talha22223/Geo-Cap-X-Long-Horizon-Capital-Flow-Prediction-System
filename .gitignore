@@ -1,0 +1,73 @@
+# ==============================================================================
+# GEOCAP-X MONOREPO GITIGNORE
+# ==============================================================================
+
+# Environment variables & secrets (CRITICAL - DO NOT COMMIT)
+.env
+.env.*
+*.env
+!.env.example
+!**/.env.example
+
+# Node dependencies
+node_modules/
+jspm_packages/
+web_folders/
+
+# Next.js & NestJS build outputs
+.next/
+out/
+dist/
+build/
+packages/*/dist/
+*.tsbuildinfo
+
+# Python virtual environments & bytecode
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.egg-info/
+.poetry/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Logs & Debugging
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Database & Prisma local state
+/apps/api/prisma/dev.db
+/apps/api/prisma/dev.db-journal
+*.sqlite
+*.sqlite3
+
+# IDE & Editor configuration
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.gemini/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+
+# Caches & Turbopack
+.turbo/
+.cache/

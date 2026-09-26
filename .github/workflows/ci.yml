@@ -1,0 +1,39 @@
+name: GeoCap-X Production CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint-test-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Root & Workspace Dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate --schema=apps/api/prisma/schema.prisma
+
+      - name: Lint Codebases
+        run: npm run lint
+
+      - name: Execute API Unit Tests
+        run: npm run test -w apps/api -- --passWithNoTests
+
+      - name: Compile and Build Apps
+        run: npm run build
+
+      - name: Validate Docker Compose Configuration
+        run: docker compose config
